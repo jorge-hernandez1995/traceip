@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<center>
+
+<h1>Mercado Libre - Trace IP</h1>
+
+<form>
+	<p>
+        IP Address <input type="text" id="ipAddress">
+    </p>
+</form>
+
+</center>
+<center>
+<button onclick="myFunction()">Get it!</button> <button onclick="document.getElementById('ipAddress').value = ''">Clear</button> 
+</center>
+
+
+<script>
+function myFunction() {
+	var str1 = "http://localhost:8080/traceip/";
+	var str2 = document.getElementById("ipAddress").value;
+	var res = str1.concat(str2);
+	window.open(res);
+}
+</script>
+
+</body>
+</html> 
