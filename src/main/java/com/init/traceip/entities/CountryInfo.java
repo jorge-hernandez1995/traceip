@@ -1,4 +1,4 @@
-package com.init.traceip.entitys;
+package com.init.traceip.entities;
 
 import java.util.ArrayList;
 

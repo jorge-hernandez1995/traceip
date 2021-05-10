@@ -2,7 +2,7 @@ package com.init.traceip.repository;
 
 import java.util.Map;
 
-import com.init.traceip.entitys.SendCountry;
+import com.init.traceip.entities.SendCountry;
 
 public interface RedisRepository {
 	

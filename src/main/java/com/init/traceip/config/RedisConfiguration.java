@@ -6,7 +6,7 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 
-import com.init.traceip.entitys.SendCountry;
+import com.init.traceip.entities.SendCountry;
 
 @Configuration
 public class RedisConfiguration {

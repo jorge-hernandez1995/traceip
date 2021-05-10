@@ -12,16 +12,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
-import com.init.traceip.entitys.Country;
-import com.init.traceip.entitys.CountryInfo;
-import com.init.traceip.entitys.CurrencyConversion;
-import com.init.traceip.entitys.SendCountry;
+import com.init.traceip.entities.Country;
+import com.init.traceip.entities.CountryInfo;
+import com.init.traceip.entities.CurrencyConversion;
+import com.init.traceip.entities.SendCountry;
 import com.init.traceip.repository.SendCountryRepository;
 
 @RestController
 public class TraceIPController {
 	private SendCountryRepository sendCountryRepository;
-	BidiMap<String, Integer> saveCountries = new DualHashBidiMap<>();
 	private static final double LATARG = -34;
 	private static final double LNGARG = -64;
 
@@ -54,7 +53,6 @@ public class TraceIPController {
 
 		} else {
 			SendCountry sendCountry = new SendCountry(country.getCountryName(), distance, 1);
-			saveCountries.put(country.getCountryName(), distance);
 			sendCountryRepository.save(sendCountry);
 
 		}

@@ -12,7 +12,7 @@ import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
-import com.init.traceip.entitys.SendCountry;
+import com.init.traceip.entities.SendCountry;
 
 @Repository
 public class SendCountryRepository implements RedisRepository {
