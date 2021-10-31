@@ -5,8 +5,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Map;
 
-import org.apache.commons.collections4.BidiMap;
-import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,15 +13,16 @@ import org.springframework.web.client.RestTemplate;
 
 import com.init.traceip.entities.Country;
 import com.init.traceip.entities.CountryInfo;
-import com.init.traceip.entities.CurrencyConversion;
 import com.init.traceip.entities.SendCountry;
 import com.init.traceip.repository.SendCountryRepository;
 
+import static com.init.traceip.constants.TraceIPConstants.ARGENTINA_LATITUDE;
+import static com.init.traceip.constants.TraceIPConstants.ARGENTINA_LONGITUDE;
+
+@Slf4j
 @RestController
 public class TraceIPController {
-	private SendCountryRepository sendCountryRepository;
-	private static final double LATARG = -34;
-	private static final double LNGARG = -64;
+	private final SendCountryRepository sendCountryRepository;
 
 	public TraceIPController(SendCountryRepository sendCountryRepository) {
 		this.sendCountryRepository = sendCountryRepository;
@@ -37,14 +37,12 @@ public class TraceIPController {
 
 		Country country = rest.getForObject("https://api.ip2country.info/ip?" + ip, Country.class);
 
-		CountryInfo info = rest.getForObject("https://restcountries.eu/rest/v2/alpha/" + country.getCountryCode()
-				+ "?fields=languages;currencies;timezones;latlng", CountryInfo.class);
+		CountryInfo info = rest.getForObject("https://restcountries.com/v2/alpha/" + country.getCountryCode()
+				+ "?fields=languages,currencies,timezones,latlng", CountryInfo.class);
+		log.trace("Country Info: {}", info);
 
-		CurrencyConversion conver = rest
-				.getForObject("http://data.fixer.io/api/latest?access_key=a66ec071a16b4c5e6df94a82806953f5&base="
-						+ info.getCurrencies().get(0).getCode() + "&symbols=USD", CurrencyConversion.class);
 
-		int distance = estimatedDistanceToARG(LATARG, LNGARG, Double.parseDouble(info.getLatlng().get(0)),
+		int distance = estimatedDistanceToARG(ARGENTINA_LATITUDE, ARGENTINA_LONGITUDE, Double.parseDouble(info.getLatlng().get(0)),
 				Double.parseDouble(info.getLatlng().get(1)));
 
 		if (sendCountryRepository.ifExist(country.getCountryName())) {
@@ -55,10 +53,6 @@ public class TraceIPController {
 			SendCountry sendCountry = new SendCountry(country.getCountryName(), distance, 1);
 			sendCountryRepository.save(sendCountry);
 
-		}
-
-		if (conver.isSuccess()) {
-			inUSD = conver.getRates().getUSD(); 
 		}
 
 		return "País: " + country.getCountryName() + "\n ISO Code: " + info.getLanguages().get(0).getIso639_1()
