@@ -1,47 +1,27 @@
 package com.init.traceip.entities;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.redis.core.RedisHash;
+
 import java.io.Serializable;
 
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@RedisHash("SendCountry")
 public class SendCountry implements Serializable {
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = -3648185270388431271L;
+
+	@Id
 	private String name;
-	private int distance;
-	private int invocations;
+	private Integer distance;
+	private Integer invocations;
 
-	public SendCountry(String name, int distance, int invocations) {
-		this.name = name;
-		this.distance = distance;
-		this.invocations = invocations;
-	}
-
-	public SendCountry(String name, int distance) {
-		this.name = name;
-		this.distance = distance;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public int getDistance() {
-		return distance;
-	}
-
-	public void setDistance(int distance) {
-		this.distance = distance;
-	}
-
-	public int getInvocations() {
-		return invocations;
-	}
-
-	public void setInvocations(int invocations) {
-		this.invocations = invocations;
-	}
 
 }
