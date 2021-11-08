@@ -37,7 +37,7 @@ public class TraceIPController {
     }
 
     @GetMapping("/statistics")
-    public String getStatistics() {
+    public String getStatistics() throws Exception {
         return sendCountryService.findMinAndMaxDistanceCountries();
     }
 

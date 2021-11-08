@@ -2,6 +2,7 @@ package com.init.traceip.services.impl;
 
 import com.init.traceip.entities.Country;
 import com.init.traceip.entities.CountryInfo;
+import com.init.traceip.entities.Language;
 import com.init.traceip.entities.SendCountry;
 import com.init.traceip.repository.SendCountryRepository;
 import com.init.traceip.services.SendCountryService;
@@ -11,10 +12,13 @@ import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import javax.persistence.EntityNotFoundException;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.init.traceip.constants.TraceIPConstants.ARGENTINA_LATITUDE;
 import static com.init.traceip.constants.TraceIPConstants.ARGENTINA_LONGITUDE;
@@ -52,12 +56,14 @@ public class SendCountryServiceImpl implements SendCountryService {
 
         Country country = rest.getForObject("https://api.ip2country.info/ip?" + ip, Country.class);
 
-        CountryInfo info = rest.getForObject("https://restcountries.com/v2/alpha/" + country.getCountryCode()
-                + "?fields=languages,currencies,timezones,latlng", CountryInfo.class);
+        String countryInfoUrl = "https://restcountries.com/v2/alpha/" + country.getCountryCode()
+                + "?fields=languages,currencies,timezones,latlng";
+        CountryInfo info = rest.getForObject(countryInfoUrl, CountryInfo.class);
+        log.trace("Country Info URL: {}", countryInfoUrl);
         log.trace("Country Info: {}", info);
 
 
-        int distance = estimatedDistanceToARG(ARGENTINA_LATITUDE, ARGENTINA_LONGITUDE, Double.parseDouble(info.getLatlng().get(0)),
+        int distance = estimatedDistanceToARG(Double.parseDouble(info.getLatlng().get(0)),
                 Double.parseDouble(info.getLatlng().get(1)));
 
         if (sendCountryRepository.findById(country.getCountryName()).isPresent()) {
@@ -82,72 +88,69 @@ public class SendCountryServiceImpl implements SendCountryService {
                 + " KM (-34,-64) a " + "(" + info.getLatlng().get(0) + "," + info.getLatlng().get(1) + ")";
     }
 
-    public String findMinAndMaxDistanceCountries() {
-        BidiMap<String, Integer> countriesMap = new DualHashBidiMap<>();
+    public String findMinAndMaxDistanceCountries() throws Exception {
         List<SendCountry> listOfCountries = (List<SendCountry>) sendCountryRepository.findAll();
-        for (SendCountry sendCountry : listOfCountries) {
-            countriesMap.put(sendCountry.getName(), sendCountry.getDistance());
-        }
-        String minDistanceCountry = countriesMap.getKey(Collections.min(countriesMap.values()));
-        int minDistance = Collections.min(countriesMap.values());
-        int minDistanceInvocatinos = getInvocations(minDistanceCountry);
+        SendCountry minDistanceCountry = listOfCountries
+                .stream()
+                .min(Comparator.comparing(SendCountry::getDistance))
+                .orElseThrow(() -> new EntityNotFoundException("Empty Country list"));
 
-        String maxDistanceCountry = countriesMap.getKey(Collections.max(countriesMap.values()));
-        int maxDistance = Collections.max(countriesMap.values());
-        int maxDistanceInvocations = getInvocations(maxDistanceCountry);
+        SendCountry maxDistanceCountry = listOfCountries
+                .stream()
+                .max(Comparator.comparing(SendCountry::getDistance))
+                .orElseThrow(() -> new Exception("No objects founded"));
 
-        int avarage = (minDistance * minDistanceInvocatinos + maxDistance * maxDistanceInvocations)
-                / (minDistanceInvocatinos + maxDistanceInvocations);
+        int average = (minDistanceCountry.getDistance() * minDistanceCountry.getInvocations()
+                + maxDistanceCountry.getDistance() * maxDistanceCountry.getInvocations())
+                / (minDistanceCountry.getInvocations() + maxDistanceCountry.getInvocations());
 
-        StringBuilder s = new StringBuilder().append("as");
 
-        return "Distancia más cercana a Buenos Aires es: " + minDistanceCountry + ". Distancia: " + minDistance
-                + " KM \n" + "Distancia más lejana a Buenos Aires es: " + maxDistanceCountry + ". Distancia: "
-                + maxDistance + " KM \n" + "El promedio es:" + avarage;
+        StringBuilder result = new StringBuilder()
+                .append("Distancia más cercana a Buenos Aires es: ").append(minDistanceCountry.getName())
+                .append(". Distancia: ").append(minDistanceCountry.getDistance()).append(" KM \n")
+                .append("Distancia más lejana a Buenos Aires es: ").append(maxDistanceCountry.getName()).append(". Distancia: ")
+                .append(maxDistanceCountry.getDistance()).append(" KM \n")
+                .append("El promedio es:").append(average);
+
+        return result.toString();
     }
 
-    public int getInvocations(String name) {
-        SendCountry sendCountry = findByName(name);
-        return sendCountry.getInvocations();
-    }
-
-    public int estimatedDistanceToARG(double lat1, double lng1, double lat2, double lng2) {
+    private int estimatedDistanceToARG(double lat2, double lng2) {
 
         double earthRadius = 6371;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLng = Math.toRadians(lng2 - lng1);
+        double dLat = Math.toRadians(lat2 - ARGENTINA_LATITUDE);
+        double dLng = Math.toRadians(lng2 - ARGENTINA_LONGITUDE);
         double sindLat = Math.sin(dLat / 2);
         double sindLng = Math.sin(dLng / 2);
         double temp1 = Math.pow(sindLat, 2)
-                + Math.pow(sindLng, 2) * Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2));
+                + Math.pow(sindLng, 2) * Math.cos(Math.toRadians(ARGENTINA_LATITUDE)) * Math.cos(Math.toRadians(lat2));
         double temp2 = 2 * Math.atan2(Math.sqrt(temp1), Math.sqrt(1 - temp1));
         double distance = earthRadius * temp2;
 
         return (int) distance;
     }
 
-    public String getAllLanguages(CountryInfo info) {
+    private String getAllLanguages(CountryInfo countryInfo) {
 
-        String languages = "";
-        for (int i = 0; i < info.getLanguages().size(); i++) {
-            languages += info.getLanguages().get(i).getName() + ", ";
-        }
+        List<String> countryLanguagesList = countryInfo.getLanguages()
+                .stream()
+                .map(Language::getName)
+                .collect(Collectors.toList());
 
-        return languages;
+        return String.join(", ", countryLanguagesList);
 
     }
 
-    public String getTime(CountryInfo info) {
+    private String getTime(CountryInfo info) {
 
-        String hours = "";
+        StringBuilder hours = new StringBuilder();
 
-        for (int i = 0; i < info.getTimezones().size(); i++) {
-            OffsetDateTime dateTime = OffsetDateTime.now(ZoneId.of(info.getTimezones().get(i)));
-            LocalTime localTime = dateTime.toLocalTime();
-            hours += localTime.toString().substring(0, 8) + " (" + ZoneId.of(info.getTimezones().get(i)) + ") / ";
-        }
+        info.getTimezones().forEach(s -> {
+            String localTime1 = LocalTime.now(ZoneId.of(s)).format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+            hours.append(localTime1).append(" (").append(s).append("), ");
+        });
 
-        return hours;
+        return hours.toString();
     }
 
 }

@@ -12,5 +12,5 @@ public interface SendCountryService {
 
     String getCountryInfo(String ip);
 
-    String findMinAndMaxDistanceCountries();
+    String findMinAndMaxDistanceCountries() throws Exception;
 }
