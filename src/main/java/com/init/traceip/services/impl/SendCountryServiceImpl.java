@@ -1,5 +1,6 @@
 package com.init.traceip.services.impl;
 
+import com.init.traceip.dto.CountryInfoDTO;
 import com.init.traceip.entities.Country;
 import com.init.traceip.entities.CountryInfo;
 import com.init.traceip.entities.Language;
@@ -7,21 +8,17 @@ import com.init.traceip.entities.SendCountry;
 import com.init.traceip.repository.SendCountryRepository;
 import com.init.traceip.services.SendCountryService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.BidiMap;
-import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.EntityNotFoundException;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.init.traceip.constants.TraceIPConstants.ARGENTINA_LATITUDE;
-import static com.init.traceip.constants.TraceIPConstants.ARGENTINA_LONGITUDE;
+import static com.init.traceip.constants.TraceIPConstants.*;
 
 @Slf4j
 @Service
@@ -49,15 +46,14 @@ public class SendCountryServiceImpl implements SendCountryService {
     }
 
     @Override
-    public String getCountryInfo(String ip) {
-        double inUSD = 0;
+    public CountryInfoDTO getCountryInfo(String ip) {
 
         RestTemplate rest = new RestTemplate();
 
-        Country country = rest.getForObject("https://api.ip2country.info/ip?" + ip, Country.class);
+        Country country = rest.getForObject(COUNTRY_NAME_URL + ip, Country.class);
+        log.trace("Country Name URL: {}", COUNTRY_NAME_URL + ip);
 
-        String countryInfoUrl = "https://restcountries.com/v2/alpha/" + country.getCountryCode()
-                + "?fields=languages,currencies,timezones,latlng";
+        String countryInfoUrl = COUNTRY_INFO_URL + country.getCountryCode() + COUNTRY_FIELDS_URL;
         CountryInfo info = rest.getForObject(countryInfoUrl, CountryInfo.class);
         log.trace("Country Info URL: {}", countryInfoUrl);
         log.trace("Country Info: {}", info);
@@ -65,6 +61,9 @@ public class SendCountryServiceImpl implements SendCountryService {
 
         int distance = estimatedDistanceToARG(Double.parseDouble(info.getLatlng().get(0)),
                 Double.parseDouble(info.getLatlng().get(1)));
+
+        String completeDistance = distance + " KM (-34,-64) a " + "(" + info.getLatlng().get(0) + ","
+                + info.getLatlng().get(1) + ")";
 
         if (sendCountryRepository.findById(country.getCountryName()).isPresent()) {
             SendCountry sendCountry = sendCountryRepository.findById(country.getCountryName()).get();
@@ -82,10 +81,14 @@ public class SendCountryServiceImpl implements SendCountryService {
 
         }
 
-        return "País: " + country.getCountryName() + "\n ISO Code: " + info.getLanguages().get(0).getIso639_1()
-                + "\n Idiomas: " + getAllLanguages(info) + "\n Monedas: " + info.getCurrencies().get(0).getCode()
-                + " = " + inUSD + " U$S" + "\n Hora(s):\n " + getTime(info) + "\n Distancia Estimada: " + distance
-                + " KM (-34,-64) a " + "(" + info.getLatlng().get(0) + "," + info.getLatlng().get(1) + ")";
+       return CountryInfoDTO.builder()
+                .country(country.getCountryName())
+                .isoCode(info.getLanguages().get(0).getIso639_1())
+                .languages(getAllLanguages(info))
+                .currencies(info.getCurrencies().get(0).getCode())
+                .time(getTime(info))
+                .estimatedDistance(completeDistance)
+                .build();
     }
 
     public String findMinAndMaxDistanceCountries() throws Exception {

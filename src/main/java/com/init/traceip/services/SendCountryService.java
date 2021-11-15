@@ -1,5 +1,6 @@
 package com.init.traceip.services;
 
+import com.init.traceip.dto.CountryInfoDTO;
 import com.init.traceip.entities.SendCountry;
 
 import java.util.List;
@@ -10,7 +11,7 @@ public interface SendCountryService {
 
     SendCountry findByName(String name);
 
-    String getCountryInfo(String ip);
+    CountryInfoDTO getCountryInfo(String ip);
 
     String findMinAndMaxDistanceCountries() throws Exception;
 }
